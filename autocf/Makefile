@@ -30,12 +30,8 @@ endef
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/etc/autocf
 	$(INSTALL_DATA) ./files/* $(1)/etc/autocf/
-endef
-
-define Package/$(PKG_NAME)/postinst
-#!/bin/sh
-echo "#30 * * * * bash /etc/autocf/updateip.sh 500" >> /etc/crontabs/root
-exit 0
+	$(INSTALL_DIR) $(1)/etc/crontabs
+	echo "#30 * * * * bash /etc/autocf/updateip.sh 500" >> $(1)/etc/crontabs/root
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))
