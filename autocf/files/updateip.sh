@@ -6,7 +6,7 @@ declare -i minspeed
 declare -i currentspeedkb
 minspeed=$1
 currentspeedkb=0
-currentip=$(grep address /root/xray.cf.json|grep -v '8.8.'|awk -F\" '{print $4}')
+currentip=$(grep address /root/xray.cf.json|grep -v '8.8.'|awk -F\" '{print $4}'|head -n 1)
 if [ "$currentip" != "" ]
 then
     echo 开始测试$currentip的速度
