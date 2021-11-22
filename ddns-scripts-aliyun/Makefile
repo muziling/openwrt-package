@@ -30,17 +30,17 @@ define Build/Compile
 endef
 
 define Package/$(PKG_NAME)/install
-        $(INSTALL_DIR) $(1)/usr/lib/ddns
-        $(INSTALL_BIN) ./files/update_aliyun_com.sh $(1)/usr/lib/ddns
+	$(INSTALL_DIR) $(1)/usr/lib/ddns
+	$(INSTALL_BIN) ./files/update_aliyun_com.sh $(1)/usr/lib/ddns
 
-        $(INSTALL_DIR) $(1)/usr/share/ddns/default
-        $(INSTALL_DATA) ./files/aliyun.com.json $(1)/usr/share/ddns/default/
+	$(INSTALL_DIR) $(1)/usr/share/ddns/default
+	$(INSTALL_DATA) ./files/aliyun.com.json $(1)/usr/share/ddns/default/
 endef
 
 define Package/$(PKG_NAME)/prerm
 #!/bin/sh
 if [ -z "$${IPKG_INSTROOT}" ]; then
-        /etc/init.d/ddns stop
+    /etc/init.d/ddns stop
 fi
 exit 0
 endef
