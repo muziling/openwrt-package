@@ -8,9 +8,9 @@ testSpeed()
     curl --resolve $domain:443:$testip https://$domain/$file -o /dev/null --connect-timeout 5 --max-time 15 > /tmp/mycfip/log.txt 2>&1
     local avg=$(cat /tmp/mycfip/log.txt | tr '\r' '\n' |grep '0:00:'| awk '{print $7}'|sed -n '$p')
     local speedunit=${avg: -1}
-    if [ ${speedunit} == 'k' ]; then
+    if [ "${speedunit}" = "k" ]; then
         echo $(expr ${avg%?}*1024)
-    elif [ ${speedunit} == 'M' ]; then
+    elif [ "${speedunit}" = "M" ]; then
         echo $(expr ${avg%?}*1024*1024)
     else
         echo $avg
