@@ -143,10 +143,6 @@ get_usrgrp_args() {
     fi
 }
 
-is_nonstd_dnsport() {
-    [ "$1" != '53' ]
-}
-
 is_empty_iptschain() {
     local ipts="$1" table="$2" chain="$3"
     [ $($ipts -t $table -nvL $chain --line-numbers | grep -Ec '^[0-9]') -eq 0 ]
@@ -846,6 +842,20 @@ status() {
     if is_enabled_udp; then
         udp_port_is_exists $proxy_udpport && echo "pxy/udp:  $(color_green '[running]')" || echo "pxy/udp:  $(color_red '[stopped]')"
     fi
+}
+
+post_start() {
+    if is_false "$selfonly"; then
+        if is_true "$ipv4"; then
+            # 定义要不走 ss-tproxy 的 IPv4 地址
+            for ipaddr in "${intranet_ignore_list[@]}"; do
+                iptables -t mangle -I SSTP_PREROUTING -s $ipaddr -j RETURN
+                iptables -t nat    -I SSTP_PREROUTING -s $ipaddr -j RETURN
+            done
+        fi
+    fi
+    local nexthop=$(ip route | grep 'default via ' | awk '{print $3}')
+    iptables -t raw -I OUTPUT -p tcp -m mark --mark 0x01 -j TEE --gateway $nexthop
 }
 
 version() {
