@@ -854,8 +854,8 @@ post_start() {
             done
         fi
     fi
-    local nexthop=$(ip route | grep 'default via ' | awk '{print $3}')
-    iptables -t raw -I OUTPUT -p tcp -m mark --mark 0x01 -j TEE --gateway $nexthop
+    #local nexthop=$(ip route | grep 'default via ' | awk '{print $3}')
+    #iptables -t raw -I OUTPUT -p tcp -m mark --mark 0x01 -j TEE --gateway $nexthop
 }
 
 version() {
