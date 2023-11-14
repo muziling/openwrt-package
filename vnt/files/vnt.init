@@ -4,7 +4,7 @@ START=99
 USE_PROCD=1
 
 NAME=vnt
-PROG=/usr/bin/$NAME
+PROG=/usr/bin/$NAME-cli
 
 validate_section_vnt() {
 	uci_load_validate "${NAME}" general "$1" "$2" \
