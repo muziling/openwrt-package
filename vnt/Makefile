@@ -1,11 +1,11 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=vnt
-PKG_VERSION:=1.2.5
+PKG_VERSION:=1.2.7
 PKG_RELEASE:=1
-
 PKG_LICENSE_FILES:=LICENSE
 PKG_MAINTAINER:=lbl8603
+PKG_HASH:=skip
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -22,9 +22,10 @@ else
 endif
 
 define Download/vnt
-	URL:=https://github.com/lbl8603/vnt/releases/download/$(PKG_VERSION)/
-	URL_FILE:=$(VNT_ARCH)
-	FILE:=$(VNT_ARCH)
+        URL:=https://github.com/lbl8603/vnt/releases/download/$(PKG_VERSION)/
+        URL_FILE:=$(VNT_ARCH)
+        FILE:=$(VNT_ARCH)
+        HASH:=$(PKG_HASH)
 endef
 
 define Package/vnt
