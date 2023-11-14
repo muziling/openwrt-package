@@ -51,7 +51,7 @@ define Package/vnt/install
 	$(INSTALL_DIR) $(1)/etc/init.d/
 	$(INSTALL_BIN) ./files/vnt.init $(1)/etc/init.d/vnt
 	$(INSTALL_DIR) $(1)/usr/bin
-	tar zxvf $(DL_DIR)/$(VNT_ARCH) -C $(1)/usr/bin/vnt
+	tar zxvf $(DL_DIR)/$(VNT_ARCH) -C $(1)/usr/bin
 endef
 
 $(eval $(call BuildPackage,vnt))
