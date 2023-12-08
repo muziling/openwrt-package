@@ -32,6 +32,7 @@ define Package/vnt
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=A virtual network tool (VPN)
+	DEPENDS:=+kmod-tun
 	URL:=https://github.com/lbl8603/vnt
 endef
 
