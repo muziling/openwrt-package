@@ -13,14 +13,13 @@ validate_section_vnt() {
 }
 
 uci_get_by_type() {
-    local ret=$(uci get ${NAME}.@$1[0].$2 2>/dev/null)
-    echo ${ret:=$3}
+	local ret=$(uci get ${NAME}.@$1[0].$2 2>/dev/null)
+	echo "${ret:=$3}"
 }
 
 gen_config_file() {
-    rm -f /var/etc/vnt/*
-    local custom_config=$(uci_get_by_type general conf_yaml)
-    [ ! "${#custom_config}" == "0" ] && echo ${custom_config} > /var/etc/vnt/conf.yaml
+	local custom_config=$(uci_get_by_type general conf_yaml)
+	[ ! "${#custom_config}" == "0" ] && echo "${custom_config}" > /var/etc/vnt/conf.yaml
 }
 
 vnt_instance() {
@@ -31,6 +30,7 @@ vnt_instance() {
 
 	[ "${enable}" = 0 ] && return 1
 
+	gen_config_file
 	procd_open_instance "$1"
 	procd_set_param command "$PROG"
 	procd_append_param command -f /var/etc/vnt/conf.yaml
@@ -43,8 +43,10 @@ vnt_instance() {
 }
 
 start_service() {
+	mkdir -p /var/etc/vnt
+	rm -f /var/etc/vnt/*
 	config_load "${NAME}"
-	config_foreach validate_section_vnt vnt vnt_instance
+	config_foreach validate_section_vnt general vnt_instance
 }
 
 reload_service() {
