@@ -1,0 +1,61 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+USE_PROCD=1
+
+NAME=hysteria
+PROG=/usr/bin/$NAME
+
+validate_section_hysteria() {
+	uci_load_validate "${NAME}" general "$1" "$2" \
+		'enable:bool:0' \
+		'conf_yaml:string'
+}
+
+uci_get_by_type() {
+    local ret=$(uci get ${NAME}.@$1[0].$2 2>/dev/null)
+    echo "${ret:=$3}"
+}
+
+gen_config_file() {
+    local custom_config=$(uci_get_by_type general conf_yaml)
+    [ ! "${#custom_config}" == "0" ] && echo "${custom_config}" > /var/etc/hysteria/conf.yaml
+}
+
+gen_ca_file() {
+    local self_ca=$(uci_get_by_type general ca)
+    [ ! "${#self_ca}" == "0" ] && echo "${self_ca}" > /var/etc/hysteria/ca.crt
+}
+
+hysteria_instance() {
+	[ "$2" = 0 ] || {
+		echo "validation failed"
+		return 1
+	}
+
+	[ "${enable}" = 0 ] && return 1
+
+	gen_config_file
+	gen_ca_file
+	procd_open_instance "$1"
+	procd_set_param command "$PROG"
+	procd_append_param command -c /var/etc/hysteria/conf.yaml
+
+	procd_set_param respawn
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+
+	procd_close_instance
+}
+
+start_service() {
+	mkdir -p /var/etc/hysteria
+	rm -f /var/etc/hysteria/*
+	config_load "${NAME}"
+	config_foreach validate_section_hysteria general hysteria_instance
+}
+
+reload_service() {
+	stop
+	start
+}
