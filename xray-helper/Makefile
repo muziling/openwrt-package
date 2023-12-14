@@ -13,7 +13,7 @@ define Package/xray-helper
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=A xray helper contain etc config and init.d
-	DEPENDS:=+xray
+	DEPENDS:=+xray-core
 endef
 
 define Build/Prepare
