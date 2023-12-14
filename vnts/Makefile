@@ -10,13 +10,13 @@ PKG_HASH:=skip
 include $(INCLUDE_DIR)/package.mk
 
 ifeq ($(ARCH),aarch64)
-	vnts_ARCH:=vnts-cli-aarch64-unknown-linux-musl-$(PKG_VERSION).tar.gz
+	vnts_ARCH:=vnts-aarch64-unknown-linux-musl-$(PKG_VERSION).tar.gz
 else ifeq ($(ARCH),arm)
-	vnts_ARCH:=vnts-cli-armv7-unknown-linux-musleabihf-$(PKG_VERSION).tar.gz
+	vnts_ARCH:=vnts-armv7-unknown-linux-musleabihf-$(PKG_VERSION).tar.gz
 else ifeq ($(ARCH),i386)
-	vnts_ARCH:=vnts-cli-i686-unknown-linux-musl-$(PKG_VERSION).tar.gz
+	vnts_ARCH:=vnts-i686-unknown-linux-musl-$(PKG_VERSION).tar.gz
 else ifeq ($(ARCH),x86_64)
-	vnts_ARCH:=vnts-cli-x86_64-unknown-linux-musl-$(PKG_VERSION).tar.gz
+	vnts_ARCH:=vnts-x86_64-unknown-linux-musl-$(PKG_VERSION).tar.gz
 else
   PKG_SOURCE:=dummy
 endif
