@@ -42,6 +42,9 @@ hysteria_instance() {
 	procd_append_param command -c /var/etc/hysteria/conf.yaml
 
 	procd_set_param respawn
+	procd_set_param limits nofile="102400 102400"
+	procd_append_param limits core="0 0"
+	procd_set_param pidfile "/var/run/hysteria.pid"
 	procd_set_param stdout 1
 	procd_set_param stderr 1
 
