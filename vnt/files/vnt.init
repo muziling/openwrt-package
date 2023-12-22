@@ -36,8 +36,8 @@ vnt_instance() {
 	procd_append_param command -f /var/etc/vnt/conf.yaml
 
 	procd_set_param respawn
-	procd_set_param stdout /var/etc/vnt/stdout
-	procd_set_param stderr /var/etc/vnt/stderr
+	procd_set_param stdout 1
+	procd_set_param stderr 1
 
 	procd_close_instance
 }
