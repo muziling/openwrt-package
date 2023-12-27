@@ -51,6 +51,7 @@ define Package/vnts/install
 	$(INSTALL_CONF) ./files/vnts.config $(1)/etc/config/vnts
 	$(INSTALL_DIR) $(1)/etc/init.d/
 	$(INSTALL_BIN) ./files/vnts.init $(1)/etc/init.d/vnts
+	$(INSTALL_DIR) $(1)/etc/vnts/
 	$(INSTALL_DIR) $(1)/usr/bin
 	tar zxvf $(DL_DIR)/$(vnts_ARCH) -C $(1)/usr/bin
 endef
