@@ -1,0 +1,3 @@
+#!/bin/sh
+# transparent-proxy integration for firewall3
+/etc/init.d/transparent-proxy restart

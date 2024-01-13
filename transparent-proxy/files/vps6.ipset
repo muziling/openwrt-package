@@ -1,0 +1,1 @@
+create vps6.ipset hash:net family inet6 hashsize 1024 maxelem 65536

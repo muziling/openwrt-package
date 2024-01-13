@@ -1,0 +1,13 @@
+#!/bin/sh
+
+uci -q batch <<-EOT
+	delete firewall.tproxy
+	set firewall.tproxy=include
+	set firewall.tproxy.type=script
+	set firewall.tproxy.path=/usr/share/tproxy/firewall.include
+	set firewall.tproxy.family=any
+	set firewall.tproxy.reload=1
+	commit firewall
+EOT
+
+exit 0

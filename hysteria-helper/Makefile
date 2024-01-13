@@ -14,6 +14,7 @@ define Package/hysteria-helper
 	CATEGORY:=Network
 	TITLE:=A hysteria helper contain etc config and init.d
 	DEPENDS:=+hysteria
+	USERID:=hysteria=2000:hysteria=2000
 endef
 
 define Build/Prepare
