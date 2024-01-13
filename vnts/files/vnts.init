@@ -12,7 +12,8 @@ validate_section_vnts() {
 		'port:string' \
 		'white_token:string' \
 		'gateway:string' \
-		'netmask:string'
+		'netmask:string' \
+		'log_path:string'
 }
 
 uci_get_by_type() {
