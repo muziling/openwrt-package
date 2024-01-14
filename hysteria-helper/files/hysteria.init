@@ -42,10 +42,17 @@ hysteria_instance() {
 	procd_append_param command -c /var/etc/hysteria/conf.yaml
 
 	procd_set_param respawn
+	[ -x /sbin/ujail -a -e /etc/capabilities/hysteria.json ] && {
+		procd_add_jail hysteria
+		procd_add_jail_mount "/var/etc/hysteria"
+		procd_set_param capabilities /etc/capabilities/hysteria.json
+		procd_set_param user hysteria
+		procd_set_param group hysteria
+		procd_set_param no_new_privs 0
+	}
 	procd_set_param limits nofile="102400 102400"
 	procd_append_param limits core="0 0"
 	procd_set_param pidfile "/var/run/hysteria.pid"
-	# procd_set_param user hysteria
 	procd_set_param stdout 1
 	procd_set_param stderr 1
 

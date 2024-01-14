@@ -13,7 +13,7 @@ define Package/hysteria-helper
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=A hysteria helper contain etc config and init.d
-	DEPENDS:=+hysteria
+	DEPENDS:=+hysteria +procd-ujail
 	USERID:=hysteria=2000:hysteria=2000
 endef
 
@@ -28,6 +28,8 @@ define Package/hysteria-helper/install
 	$(INSTALL_CONF) ./files/hysteria.config $(1)/etc/config/hysteria
 	$(INSTALL_DIR) $(1)/etc/init.d/
 	$(INSTALL_BIN) ./files/hysteria.init $(1)/etc/init.d/hysteria
+	$(INSTALL_DIR) $(1)/etc/capabilities/
+	$(INSTALL_BIN) ./files/hysteria.json $(1)/etc/capabilities/hysteria.json
 endef
 
 $(eval $(call BuildPackage,hysteria-helper))
