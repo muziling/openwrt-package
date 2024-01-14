@@ -33,7 +33,7 @@ vnts_instance() {
 	procd_set_param command "$PROG"
 	procd_append_param command --port ${port} --gateway ${gateway} --netmask ${netmask}
 	[ ! -z "${white_token}" ] && procd_append_param command --white-token ${white_token}
-	[ ! -z "${log_path}" ] && procd_append_param command --log_path ${log_path}
+	[ ! -z "${log_path}" ] && procd_append_param command --log-path ${log_path}
 
 	procd_set_param respawn
 	procd_set_param stdout 1
