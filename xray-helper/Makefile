@@ -13,7 +13,8 @@ define Package/xray-helper
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=A xray helper contain etc config and init.d
-	DEPENDS:=+xray-core
+	DEPENDS:=+xray-core +procd-ujail
+	USERID:=xray=2001:xray=2001
 endef
 
 define Build/Prepare
@@ -27,6 +28,8 @@ define Package/xray-helper/install
 	$(INSTALL_CONF) ./files/xray.config $(1)/etc/config/xray
 	$(INSTALL_DIR) $(1)/etc/init.d/
 	$(INSTALL_BIN) ./files/xray.init $(1)/etc/init.d/xray
+	$(INSTALL_DIR) $(1)/etc/capabilities/
+	$(INSTALL_BIN) ./files/xray.json $(1)/etc/capabilities/xray.json
 endef
 
 $(eval $(call BuildPackage,xray-helper))
