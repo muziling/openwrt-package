@@ -117,7 +117,7 @@ start_iptables() {
 		# 通过匹配用户来避免环路，-m owner或-m mark任意一个生效都可以
 		[ ! -z "${tproxy_port_process_runat_user}" ] && iptables -t mangle -A HYSTERIA_MARK -m owner --uid-owner ${tproxy_port_process_runat_user} -j RETURN
 		[ ! -z "${so_mark}" ] && iptables -t mangle -A HYSTERIA_MARK -j RETURN -m mark --mark ${so_mark}
-		if [ -z "${tproxy_port_process_runat_user}" a -z "${so_mark}" ];then
+		if [ -z "${tproxy_port_process_runat_user}" ] && [ -z "${so_mark}" ];then
 			echo '您没有配置tproxy_port_process_runat_user或so_mark，为避免产生回环，已自动改成不代理本机流量'
 			return 1
 		fi
@@ -152,7 +152,7 @@ start_iptables() {
 			# 通过匹配用户来避免环路
 			[ ! -z "${tproxy_port_process_runat_user}" ] && ip6tables -t mangle -A HYSTERIA_MARK -m owner --uid-owner ${tproxy_port_process_runat_user} -j RETURN
 			[ ! -z "${so_mark}" ] && ip6tables -t mangle -A HYSTERIA_MARK -j RETURN -m mark --mark ${so_mark}
-			if [ -z "${tproxy_port_process_runat_user}" a -z "${so_mark}" ];then
+			if [ -z "${tproxy_port_process_runat_user}" ] && [ -z "${so_mark}" ];then
 				echo '您没有配置tproxy_port_process_runat_user或so_mark，为避免产生回环，已自动改成不代理本机流量'
 				return 1
 			fi
