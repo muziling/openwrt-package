@@ -6,7 +6,7 @@ USE_PROCD=1
 NAME=chinadns-ng
 PROG=/usr/bin/$NAME
 
-validate_section_chinadns-ng() {
+validate_section_chinadns_ng() {
 	uci_load_validate "${NAME}" general "$1" "$2" \
 		'enable:bool:0' \
 		'conf_raw:string'
@@ -22,7 +22,7 @@ gen_config_file() {
 	[ ! "${#custom_config}" == "0" ] && echo "${custom_config}" > /var/etc/chinadns-ng/conf.raw
 }
 
-chinadns-ng_instance() {
+chinadns_ng_instance() {
 	[ "$2" = 0 ] || {
 		echo "validation failed"
 		return 1
@@ -46,7 +46,7 @@ start_service() {
 	mkdir -p /var/etc/chinadns-ng
 	rm -f /var/etc/chinadns-ng/*
 	config_load "${NAME}"
-	config_foreach validate_section_chinadns-ng general chinadns-ng_instance
+	config_foreach validate_section_chinadns_ng general chinadns_ng_instance
 }
 
 reload_service() {
