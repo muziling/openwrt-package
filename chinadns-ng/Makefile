@@ -10,11 +10,11 @@ PKG_HASH:=skip
 include $(INCLUDE_DIR)/package.mk
 
 ifeq ($(ARCH),aarch64)
-	chinadns-ng_ARCH:=chinadns-ng@aarch64-linux-musl@generic+v8a@fast+lto
+	chinadns-ng_ARCH:=chinadns-ng@aarch64-linux-musl@generic+v8a@fast
 else ifeq ($(ARCH),i386)
-	chinadns-ng_ARCH:=chinadns-ng@i386-linux-musl@i686@fast+lto
+	chinadns-ng_ARCH:=chinadns-ng@i386-linux-musl@i686@fast
 else ifeq ($(ARCH),x86_64)
-	chinadns-ng_ARCH:=chinadns-ng@x86_64-linux-musl@x86_64_v4@fast+lto
+	chinadns-ng_ARCH:=chinadns-ng@x86_64-linux-musl@x86_64_v4@fast
 else
   PKG_SOURCE:=dummy
 endif
