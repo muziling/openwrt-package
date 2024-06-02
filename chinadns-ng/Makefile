@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=chinadns-ng
-PKG_VERSION:=2024.04.27
+PKG_VERSION:=2024.05.12
 PKG_RELEASE:=1
 PKG_LICENSE_FILES:=LICENSE
 PKG_MAINTAINER:=zfl9
@@ -10,11 +10,11 @@ PKG_HASH:=skip
 include $(INCLUDE_DIR)/package.mk
 
 ifeq ($(ARCH),aarch64)
-	chinadns-ng_ARCH:=chinadns-ng+wolfssl@aarch64-linux-musl@generic+v8a@fast
+	chinadns-ng_ARCH:=chinadns-ng+wolfssl@aarch64-linux-musl@generic+v8a@fast+lto
 else ifeq ($(ARCH),i386)
-	chinadns-ng_ARCH:=chinadns-n+wolfsslg@i386-linux-musl@i686@fast
+	chinadns-ng_ARCH:=chinadns-n+wolfsslg@i386-linux-musl@i686@fast+lto
 else ifeq ($(ARCH),x86_64)
-	chinadns-ng_ARCH:=chinadns-ng+wolfssl@x86_64-linux-musl@x86_64_v4@fast
+	chinadns-ng_ARCH:=chinadns-ng+wolfssl@x86_64-linux-musl@x86_64_v4@fast+lto
 else
   PKG_SOURCE:=dummy
 endif
