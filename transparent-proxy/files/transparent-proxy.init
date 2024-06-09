@@ -15,7 +15,8 @@ validate_section_tproxy() {
 		'ipv6_proxy:bool:0' \
 		'so_mark:string' \
 		'tproxy_port_process_runat_user:string' \
-		'skip_lan_ip:string'
+		'skip_lan_ip:string' \
+		'skip_lan_mac:string'
 }
 
 uci_get_by_type() {
@@ -73,7 +74,14 @@ start_iptables() {
 	iptables -t mangle -A HYSTERIA -d 224.0.0.0/4 -j RETURN
 	iptables -t mangle -A HYSTERIA -d 240.0.0.0/4 -j RETURN
 	for lanip in ${skip_lan_ip} ; do
-		iptables -t mangle -A HYSTERIA -s ${lanip} -j RETURN
+		if [ ! -z ${lanip} ];then
+			iptables -t mangle -A HYSTERIA -s ${lanip} -j RETURN
+		fi
+	done
+	for lanmac in ${skip_lan_mac} ; do
+		if [ ! -z ${lanmac} ];then
+			iptables -t mangle -A HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
+		fi
 	done
 	iptables -t mangle -A HYSTERIA -p tcp -m set --match-set china.ipset dst -j RETURN
 	iptables -t mangle -A HYSTERIA -p udp -m set --match-set china.ipset dst -j RETURN
@@ -95,6 +103,11 @@ start_iptables() {
 		ip6tables -t mangle -A HYSTERIA -m socket -j RETURN
 		# 仅对公网 IPv6 启用代理
 		ip6tables -t mangle -A HYSTERIA ! -d 2000::/3 -j RETURN
+		for lanmac in ${skip_lan_mac} ; do
+			if [ ! -z ${lanmac} ];then
+				ip6tables -t mangle -A HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
+			fi
+		done
 		ip6tables -t mangle -A HYSTERIA -p tcp -m set --match-set china6.ipset dst -j RETURN
 		ip6tables -t mangle -A HYSTERIA -p udp -m set --match-set china6.ipset dst -j RETURN
 		ip6tables -t mangle -A HYSTERIA -p tcp -m set --match-set vps6.ipset dst -j RETURN
