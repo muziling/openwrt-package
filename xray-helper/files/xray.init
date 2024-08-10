@@ -39,6 +39,7 @@ xray_instance() {
 	[ -x /sbin/ujail -a -e /etc/capabilities/xray.json ] && {
 		procd_add_jail xray
 		procd_add_jail_mount "/var/etc/xray-helper"
+		procd_add_jail_mount "/usr/share/xray"
 		procd_set_param capabilities /etc/capabilities/xray.json
 		procd_set_param user xray
 		procd_set_param group xray
