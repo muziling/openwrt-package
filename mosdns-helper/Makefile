@@ -24,9 +24,9 @@ endef
 
 define Package/mosdns-helper/install
 	$(INSTALL_DIR) $(1)/etc/config/
-	$(INSTALL_CONF) ./files/mosdns-helper.config $(1)/etc/config/mosdns-helper
+	$(INSTALL_CONF) ./files/mosdns.config $(1)/etc/config/mosdns
 	$(INSTALL_DIR) $(1)/etc/init.d/
-	$(INSTALL_BIN) ./files/mosdns-helper.init $(1)/etc/init.d/mosdns-helper
+	$(INSTALL_BIN) ./files/mosdns.init $(1)/etc/init.d/mosdns
 endef
 
 $(eval $(call BuildPackage,mosdns-helper))
