@@ -73,6 +73,10 @@ start_iptables() {
 	iptables -t mangle -A HYSTERIA -d 192.168.0.0/16 -j RETURN
 	iptables -t mangle -A HYSTERIA -d 224.0.0.0/4 -j RETURN
 	iptables -t mangle -A HYSTERIA -d 240.0.0.0/4 -j RETURN
+	
+	# 如果全局用iptables劫持dns的话，启用以下两行
+	#iptables -t mangle -I HYSTERIA -p tcp --dport 53 -j RETURN
+	#iptables -t mangle -I HYSTERIA -p udp --dport 53 -j RETURN
 	for lanip in ${skip_lan_ip} ; do
 		if [ ! -z ${lanip} ];then
 			iptables -t mangle -A HYSTERIA -s ${lanip} -j RETURN
@@ -102,7 +106,10 @@ start_iptables() {
 		[ "${udp}" == 1 ] && ip6tables -t mangle -A HYSTERIA -p udp -m socket --transparent -j MARK --set-mark ${MARK}
 		ip6tables -t mangle -A HYSTERIA -m socket -j RETURN
 		# 仅对公网 IPv6 启用代理
-		ip6tables -t mangle -A HYSTERIA ! -d 2000::/3 -j RETURN
+		ip6tables -t mangle -A HYSTERIA ! -d 2000::/3 -j RETURN	
+		# 如果全局用iptables劫持dns的话，启用以下两行
+		#ip6tables -t mangle -I HYSTERIA -p tcp --dport 53 -j RETURN
+		#ip6tables -t mangle -I HYSTERIA -p udp --dport 53 -j RETURN
 		for lanmac in ${skip_lan_mac} ; do
 			if [ ! -z ${lanmac} ];then
 				ip6tables -t mangle -A HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
