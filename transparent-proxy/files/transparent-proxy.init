@@ -245,6 +245,49 @@ stop_ipset() {
 	fi
 }
 
+validate_section_fw() {
+	uci_load_validate "firewall" rule "$1" "$2" \
+		'src:string' \
+		'dest:string' \
+		'target:string' \
+		'src_mac:string' \
+		'src_ip:string' \
+		'enabled:string'
+}
+
+fw_rule() {
+	[ "$2" = 0 ] || {
+		echo "validation failed"
+		return 1
+	}
+
+	[ "${enabled}" = "0" ] && return 1
+
+	if [[ "${src}" == "lan" ]] && [[ "${dest}" == "wan" ]] && [[ "${target}" == "REJECT" ]];then
+		for lanmac in ${src_mac} ; do
+			if [ ! -z ${lanmac} ];then
+				iptables -t mangle -I HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
+		        if [ "${ipv6_proxy}" == 1 ];then
+		            ip6tables -t mangle -I HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
+		        fi
+			fi
+		done
+		for lanip in ${src_ip} ; do
+			if [ ! -z ${lanip} ];then
+				iptables -t mangle -I HYSTERIA -s ${lanip} -j RETURN
+		        if [ "${ipv6_proxy}" == 1 ];then
+		            ip6tables -t mangle -I HYSTERIA -s ${lanip} -j RETURN
+		        fi
+			fi
+		done
+	fi
+}
+
+start_fw_reject() {
+	config_load "firewall"
+	config_foreach validate_section_fw rule fw_rule
+}
+
 start_x() {
 	echo "start ..."
 	if [ "${so_mark}" == 1 ];then
@@ -253,6 +296,7 @@ start_x() {
 	fi
 	start_ipset
 	start_iptables
+	start_fw_reject
 	start_iproute2
 	echo "start end"
 	if [ "${self_proxy}" == 1 ];then
