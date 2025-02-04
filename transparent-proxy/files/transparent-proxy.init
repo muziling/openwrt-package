@@ -16,7 +16,9 @@ validate_section_tproxy() {
 		'so_mark:string' \
 		'tproxy_port_process_runat_user:string' \
 		'skip_lan_ip:string' \
-		'skip_lan_mac:string'
+		'skip_lan_mac:string' \
+		'ipsetname:string' \
+		'ipset6name:string'
 }
 
 uci_get_by_type() {
@@ -87,8 +89,15 @@ start_iptables() {
 			iptables -t mangle -A HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
 		fi
 	done
-	iptables -t mangle -A HYSTERIA -p tcp -m set --match-set china.ipset dst -j RETURN
-	iptables -t mangle -A HYSTERIA -p udp -m set --match-set china.ipset dst -j RETURN
+	ipset destroy combined.ipset
+	ipset create combined.ipset list:set
+	for ips in ${ipsetname} ; do
+		if [ ! -z ${ips} ];then
+			ipset add combined.ipset ${ips}
+		fi
+	done
+	iptables -t mangle -A HYSTERIA -p tcp -m set --match-set china.ipset dst -m set ! --match-set combined.ipset dst -j RETURN
+	iptables -t mangle -A HYSTERIA -p udp -m set --match-set china.ipset dst -m set ! --match-set combined.ipset dst -j RETURN
 	iptables -t mangle -A HYSTERIA -p tcp -m set --match-set vps.ipset dst -j RETURN
 	iptables -t mangle -A HYSTERIA -p udp -m set --match-set vps.ipset dst -j RETURN
 
@@ -115,8 +124,15 @@ start_iptables() {
 				ip6tables -t mangle -A HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
 			fi
 		done
-		ip6tables -t mangle -A HYSTERIA -p tcp -m set --match-set china6.ipset dst -j RETURN
-		ip6tables -t mangle -A HYSTERIA -p udp -m set --match-set china6.ipset dst -j RETURN
+		ipset destroy combined6.ipset
+		ipset create combined6.ipset list:set
+		for ips in ${ipset6name} ; do
+			if [ ! -z ${ips} ];then
+				ipset add combined6.ipset ${ips}
+			fi
+		done
+		ip6tables -t mangle -A HYSTERIA -p tcp -m set --match-set china6.ipset dst -m set ! --match-set combined6.ipset dst -j RETURN
+		ip6tables -t mangle -A HYSTERIA -p udp -m set --match-set china6.ipset dst -m set ! --match-set combined6.ipset dst -j RETURN
 		ip6tables -t mangle -A HYSTERIA -p tcp -m set --match-set vps6.ipset dst -j RETURN
 		ip6tables -t mangle -A HYSTERIA -p udp -m set --match-set vps6.ipset dst -j RETURN
 		# 重定向流量到 TProxy 端口
@@ -275,7 +291,7 @@ fw_rule() {
 		for lanip in ${src_ip} ; do
 			if [ ! -z ${lanip} ];then
 				iptables -t mangle -I HYSTERIA -s ${lanip} -j RETURN
-		        if [ "${ipv6_proxy}" == 1 ];then
+		        if [ "${ipv6_proxy}" == 1 ] && [[ ${lanip} =~ ":" ]];then
 		            ip6tables -t mangle -I HYSTERIA -s ${lanip} -j RETURN
 		        fi
 			fi
