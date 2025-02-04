@@ -89,15 +89,14 @@ start_iptables() {
 			iptables -t mangle -A HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
 		fi
 	done
-	ipset destroy combined.ipset
-	ipset create combined.ipset list:set
+	notmatch=''
 	for ips in ${ipsetname} ; do
 		if [ ! -z ${ips} ];then
-			ipset add combined.ipset ${ips}
+			notmatch=${notmatch}'-m set ! --match-set '${ips}' dst '
 		fi
 	done
-	iptables -t mangle -A HYSTERIA -p tcp -m set --match-set china.ipset dst -m set ! --match-set combined.ipset dst -j RETURN
-	iptables -t mangle -A HYSTERIA -p udp -m set --match-set china.ipset dst -m set ! --match-set combined.ipset dst -j RETURN
+	eval iptables -t mangle -A HYSTERIA -p tcp -m set --match-set china.ipset dst ${notmatch} -j RETURN
+	eval iptables -t mangle -A HYSTERIA -p udp -m set --match-set china.ipset dst ${notmatch} -j RETURN
 	iptables -t mangle -A HYSTERIA -p tcp -m set --match-set vps.ipset dst -j RETURN
 	iptables -t mangle -A HYSTERIA -p udp -m set --match-set vps.ipset dst -j RETURN
 
@@ -124,15 +123,14 @@ start_iptables() {
 				ip6tables -t mangle -A HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
 			fi
 		done
-		ipset destroy combined6.ipset
-		ipset create combined6.ipset list:set
+		notmatch=''
 		for ips in ${ipset6name} ; do
 			if [ ! -z ${ips} ];then
-				ipset add combined6.ipset ${ips}
+				notmatch=${notmatch}'-m set ! --match-set '${ips}' dst '
 			fi
 		done
-		ip6tables -t mangle -A HYSTERIA -p tcp -m set --match-set china6.ipset dst -m set ! --match-set combined6.ipset dst -j RETURN
-		ip6tables -t mangle -A HYSTERIA -p udp -m set --match-set china6.ipset dst -m set ! --match-set combined6.ipset dst -j RETURN
+		eval ip6tables -t mangle -A HYSTERIA -p tcp -m set --match-set china6.ipset dst ${notmatch} -j RETURN
+		eval ip6tables -t mangle -A HYSTERIA -p udp -m set --match-set china6.ipset dst ${notmatch} -j RETURN
 		ip6tables -t mangle -A HYSTERIA -p tcp -m set --match-set vps6.ipset dst -j RETURN
 		ip6tables -t mangle -A HYSTERIA -p udp -m set --match-set vps6.ipset dst -j RETURN
 		# 重定向流量到 TProxy 端口
