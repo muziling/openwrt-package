@@ -22,6 +22,16 @@ gen_config_file() {
 	[ ! "${#custom_config}" == "0" ] && echo "${custom_config}" > /var/etc/chinadns-ng/conf.raw
 }
 
+create_ipset() {
+	for setname in $(grep group-ipset /var/etc/chinadns-ng/conf.raw |awk '{print $2}'|tr ',' '\n') ; do
+		if [[ ${setname: -1} == "6" ]];then
+			ipset create $setname hash:net family inet6 hashsize 1024 maxelem 65536
+		else
+			ipset create $setname hash:net family inet hashsize 1024 maxelem 65536
+		fi
+	done
+}
+
 chinadns_ng_instance() {
 	[ "$2" = 0 ] || {
 		echo "validation failed"
@@ -31,6 +41,7 @@ chinadns_ng_instance() {
 	[ "${enable}" = 0 ] && return 1
 
 	gen_config_file
+	create_ipset
 	procd_open_instance "$1"
 	procd_set_param command "$PROG"
 	procd_append_param command -C /var/etc/chinadns-ng/conf.raw
