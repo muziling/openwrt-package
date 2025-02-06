@@ -24,10 +24,11 @@ gen_config_file() {
 
 create_ipset() {
 	for setname in $(grep group-ipset /var/etc/chinadns-ng/conf.raw |awk '{print $2}'|tr ',' '\n') ; do
+		ipset destroy $setname
 		if [[ ${setname: -1} == "6" ]];then
-			ipset create $setname hash:net family inet6 hashsize 1024 maxelem 65536
+			ipset create $setname hash:ip family inet6 hashsize 1024 maxelem 65536
 		else
-			ipset create $setname hash:net family inet hashsize 1024 maxelem 65536
+			ipset create $setname hash:ip family inet hashsize 1024 maxelem 65536
 		fi
 	done
 }

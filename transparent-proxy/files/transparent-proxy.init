@@ -4,7 +4,7 @@ START=99
 USE_PROCD=1
 
 NAME=transparent-proxy
-MARK=1088
+#MARK=1088
 
 validate_section_tproxy() {
 	uci_load_validate "${NAME}" general "$1" "$2" \
@@ -18,7 +18,8 @@ validate_section_tproxy() {
 		'skip_lan_ip:string' \
 		'skip_lan_mac:string' \
 		'ipsetname:string' \
-		'ipset6name:string'
+		'ipset6name:string' \
+		'ipsetfile:string'
 }
 
 uci_get_by_type() {
@@ -61,12 +62,6 @@ boot() {
 start_iptables() {
 	iptables -t mangle -N HYSTERIA
 
-	# 跳过已经由 TProxy 接管的流量
-	iptables -t mangle -A HYSTERIA -p tcp -m socket --transparent -j MARK --set-mark ${MARK}
-	[ "${udp}" == 1 ] && iptables -t mangle -A HYSTERIA -p udp -m socket --transparent -j MARK --set-mark ${MARK}
-	iptables -t mangle -A HYSTERIA -m socket -j RETURN
-
-	# 绕过私有和特殊 IPv4 地址
 	iptables -t mangle -A HYSTERIA -d 0.0.0.0/8 -j RETURN
 	iptables -t mangle -A HYSTERIA -d 10.0.0.0/8 -j RETURN
 	iptables -t mangle -A HYSTERIA -d 127.0.0.0/8 -j RETURN
@@ -75,7 +70,7 @@ start_iptables() {
 	iptables -t mangle -A HYSTERIA -d 192.168.0.0/16 -j RETURN
 	iptables -t mangle -A HYSTERIA -d 224.0.0.0/4 -j RETURN
 	iptables -t mangle -A HYSTERIA -d 240.0.0.0/4 -j RETURN
-	
+	iptables -t mangle -A HYSTERIA -d 255.255.255.255/32 -j RETURN
 	# 如果全局用iptables劫持dns的话，启用以下两行
 	#iptables -t mangle -I HYSTERIA -p tcp --dport 53 -j RETURN
 	#iptables -t mangle -I HYSTERIA -p udp --dport 53 -j RETURN
@@ -89,55 +84,70 @@ start_iptables() {
 			iptables -t mangle -A HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
 		fi
 	done
-	notmatch=''
-	for ips in ${ipsetname} ; do
-		if [ ! -z ${ips} ];then
-			notmatch=${notmatch}'-m set ! --match-set '${ips}' dst '
-		fi
-	done
-	eval iptables -t mangle -A HYSTERIA -p tcp -m set --match-set china.ipset dst ${notmatch} -j RETURN
-	eval iptables -t mangle -A HYSTERIA -p udp -m set --match-set china.ipset dst ${notmatch} -j RETURN
+	iptables -t mangle -A HYSTERIA -p tcp -m set --match-set china.ipset dst -j RETURN
+	[ "${udp}" == 1 ] && iptables -t mangle -A HYSTERIA -p udp -m set --match-set china.ipset dst -j RETURN
 	iptables -t mangle -A HYSTERIA -p tcp -m set --match-set vps.ipset dst -j RETURN
-	iptables -t mangle -A HYSTERIA -p udp -m set --match-set vps.ipset dst -j RETURN
-
+	[ "${udp}" == 1 ] && iptables -t mangle -A HYSTERIA -p udp -m set --match-set vps.ipset dst -j RETURN
+	iptables -t mangle -A HYSTERIA -j RETURN -m mark --mark ${so_mark}
 	# 重定向流量到 TProxy 端口
-	iptables -t mangle -A HYSTERIA -p tcp -j TPROXY --on-port ${redirect_port} --on-ip 127.0.0.1 --tproxy-mark ${MARK}
-	[ "${udp}" == 1 ] && iptables -t mangle -A HYSTERIA -p udp -j TPROXY --on-port ${redirect_port} --on-ip 127.0.0.1 --tproxy-mark ${MARK}
-
+	[ "${udp}" == 1 ] && iptables -t mangle -A HYSTERIA -p udp -j TPROXY --on-ip 127.0.0.1 --on-port ${redirect_port} --tproxy-mark 1
+	iptables -t mangle -A HYSTERIA -p tcp -j TPROXY --on-ip 127.0.0.1 --on-port ${redirect_port} --tproxy-mark 1
 	# 启用上述规则
 	iptables -t mangle -A PREROUTING -j HYSTERIA
 
+	# 新建 HYSTERIA_DIVERT 规则，避免已有连接的包二次通过 TPROXY，理论上有一定的性能提升 v4
+	iptables -t mangle -N HYSTERIA_DIVERT
+	iptables -t mangle -A HYSTERIA_DIVERT -j MARK --set-mark 1
+	iptables -t mangle -A HYSTERIA_DIVERT -j ACCEPT
+	iptables -t mangle -I PREROUTING -p tcp -m socket -j HYSTERIA_DIVERT
+
+	# 强制走代理，用mangle链的TPROXY会上不了国内网，所以只能用REDIRECT方式
+	for ips in ${ipsetname} ; do
+		if [ ! -z ${ips} ];then
+			iptables -t nat -I PREROUTING -p tcp -m set --match-set ${ips} dst -m comment --comment "USE_PROXY" -j REDIRECT --to-port ${redirect_port}
+			[ "${udp}" == 1 ] && iptables -t nat -I PREROUTING -p udp -m set --match-set ${ips} dst -m comment --comment "USE_PROXY" -j REDIRECT --to-port ${redirect_port}
+		fi
+	done
+
 	if [ "${ipv6_proxy}" == 1 ];then
-		ip6tables -t mangle -N HYSTERIA
-		# 跳过已经由 TProxy 接管的流量
-		ip6tables -t mangle -A HYSTERIA -p tcp -m socket --transparent -j MARK --set-mark ${MARK}
-		[ "${udp}" == 1 ] && ip6tables -t mangle -A HYSTERIA -p udp -m socket --transparent -j MARK --set-mark ${MARK}
-		ip6tables -t mangle -A HYSTERIA -m socket -j RETURN
+		ip6tables -t mangle -N HYSTERIA6
+
 		# 仅对公网 IPv6 启用代理
-		ip6tables -t mangle -A HYSTERIA ! -d 2000::/3 -j RETURN	
-		# 如果全局用iptables劫持dns的话，启用以下两行
-		#ip6tables -t mangle -I HYSTERIA -p tcp --dport 53 -j RETURN
-		#ip6tables -t mangle -I HYSTERIA -p udp --dport 53 -j RETURN
+		ip6tables -t mangle -A HYSTERIA6 ! -d 2000::/3 -j RETURN	
+		# 如果全局用ip6tables劫持dns的话，启用以下两行
+		#ip6tables -t mangle -I HYSTERIA6 -p tcp --dport 53 -j RETURN
+		#ip6tables -t mangle -I HYSTERIA6 -p udp --dport 53 -j RETURN
 		for lanmac in ${skip_lan_mac} ; do
 			if [ ! -z ${lanmac} ];then
-				ip6tables -t mangle -A HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
+				ip6tables -t mangle -A HYSTERIA6 -m mac --mac-source ${lanmac} -j RETURN
 			fi
 		done
-		notmatch=''
+		ip6tables -t mangle -A HYSTERIA6 -p tcp -m set --match-set china6.ipset dst -j RETURN
+		[ "${udp}" == 1 ] && ip6tables -t mangle -A HYSTERIA6 -p udp -m set --match-set china6.ipset dst -j RETURN
+		ip6tables -t mangle -A HYSTERIA6 -p tcp -m set --match-set vps6.ipset dst -j RETURN
+		[ "${udp}" == 1 ] && ip6tables -t mangle -A HYSTERIA6 -p udp -m set --match-set vps6.ipset dst -j RETURN
+		ip6tables -t mangle -A HYSTERIA6 -j RETURN -m mark --mark ${so_mark}
+		# 重定向流量到 TProxy 端口
+		[ "${udp}" == 1 ] && ip6tables -t mangle -A HYSTERIA6 -p udp -j TPROXY --on-ip ::1 --on-port ${redirect_port} --tproxy-mark 1
+		ip6tables -t mangle -A HYSTERIA6 -p tcp -j TPROXY --on-ip ::1 --on-port ${redirect_port} --tproxy-mark 1
+		# 启用上述规则
+		ip6tables -t mangle -A PREROUTING -j HYSTERIA6
+	
+		# 新建 HYSTERIA_DIVERT 规则，避免已有连接的包二次通过 TPROXY，理论上有一定的性能提升 v4
+		ip6tables -t mangle -N HYSTERIA_DIVERT
+		ip6tables -t mangle -A HYSTERIA_DIVERT -j MARK --set-mark 1
+		ip6tables -t mangle -A HYSTERIA_DIVERT -j ACCEPT
+		ip6tables -t mangle -I PREROUTING -p tcp -m socket -j HYSTERIA_DIVERT
+
+		# 强制走代理  TPROXY 可以透明代理 IPV6，而 REDIRECT 不行
+		ip6tables -t mangle -N HYSTERIA6_PXY
 		for ips in ${ipset6name} ; do
 			if [ ! -z ${ips} ];then
-				notmatch=${notmatch}'-m set ! --match-set '${ips}' dst '
+				ip6tables -t mangle -A HYSTERIA6_PXY -p tcp -m set --match-set ${ips} dst -j TPROXY --on-port ${redirect_port} --on-ip ::1 --tproxy-mark 0x1
+				[ "${udp}" == 1 ] && ip6tables -t mangle -A HYSTERIA6_PXY -p udp -m set --match-set ${ips} dst -j TPROXY --on-port ${redirect_port} --on-ip ::1 --tproxy-mark 0x1
 			fi
 		done
-		eval ip6tables -t mangle -A HYSTERIA -p tcp -m set --match-set china6.ipset dst ${notmatch} -j RETURN
-		eval ip6tables -t mangle -A HYSTERIA -p udp -m set --match-set china6.ipset dst ${notmatch} -j RETURN
-		ip6tables -t mangle -A HYSTERIA -p tcp -m set --match-set vps6.ipset dst -j RETURN
-		ip6tables -t mangle -A HYSTERIA -p udp -m set --match-set vps6.ipset dst -j RETURN
-		# 重定向流量到 TProxy 端口
-		ip6tables -t mangle -A HYSTERIA -p tcp -j TPROXY --on-port ${redirect_port} --on-ip ::1 --tproxy-mark ${MARK}
-		[ "${udp}" == 1 ] && ip6tables -t mangle -A HYSTERIA -p udp -j TPROXY --on-port ${redirect_port} --on-ip ::1 --tproxy-mark ${MARK}
-		# 启用上述规则
-		ip6tables -t mangle -A PREROUTING -j HYSTERIA
+		ip6tables -t mangle -A PREROUTING -j HYSTERIA6_PXY
 	fi
 
 	# === 代理本机流量 - 开始 ===
@@ -161,14 +171,15 @@ start_iptables() {
 		iptables -t mangle -A HYSTERIA_MARK -d 192.168.0.0/16 -j RETURN
 		iptables -t mangle -A HYSTERIA_MARK -d 224.0.0.0/4 -j RETURN
 		iptables -t mangle -A HYSTERIA_MARK -d 240.0.0.0/4 -j RETURN
+		iptables -t mangle -A HYSTERIA_MARK -d 255.255.255.255/32 -j RETURN
 		iptables -t mangle -A HYSTERIA_MARK -p tcp -m set --match-set china.ipset dst -j RETURN
-		iptables -t mangle -A HYSTERIA_MARK -p udp -m set --match-set china.ipset dst -j RETURN
+		[ "${udp}" == 1 ] && iptables -t mangle -A HYSTERIA_MARK -p udp -m set --match-set china.ipset dst -j RETURN
 		iptables -t mangle -A HYSTERIA_MARK -p tcp -m set --match-set vps.ipset dst -j RETURN
-		iptables -t mangle -A HYSTERIA_MARK -p udp -m set --match-set vps.ipset dst -j RETURN
+		[ "${udp}" == 1 ] && iptables -t mangle -A HYSTERIA_MARK -p udp -m set --match-set vps.ipset dst -j RETURN
 
 		# 重路由 OUTPUT 链流量到 PREROUTING 链
-		iptables -t mangle -A HYSTERIA_MARK -p tcp -j MARK --set-mark ${MARK}
-		[ "${udp}" == 1 ] && iptables -t mangle -A HYSTERIA_MARK -p udp -j MARK --set-mark ${MARK}
+		iptables -t mangle -A HYSTERIA_MARK -p tcp -j MARK --set-mark 1
+		[ "${udp}" == 1 ] && iptables -t mangle -A HYSTERIA_MARK -p udp -j MARK --set-mark 1
 
 		# 启用上述规则
 		iptables -t mangle -A OUTPUT -j HYSTERIA_MARK
@@ -177,25 +188,30 @@ start_iptables() {
 		if [ "${ipv6_proxy}" == 1 ];then
 			# === 代理本机流量 - 开始 ===
 
-			ip6tables -t mangle -N HYSTERIA_MARK
+			ip6tables -t mangle -N HYSTERIA6_MARK
 
 			# 通过匹配用户来避免环路
-			[ ! -z "${tproxy_port_process_runat_user}" ] && ip6tables -t mangle -A HYSTERIA_MARK -m owner --uid-owner ${tproxy_port_process_runat_user} -j RETURN
-			[ ! -z "${so_mark}" ] && ip6tables -t mangle -A HYSTERIA_MARK -j RETURN -m mark --mark ${so_mark}
+			[ ! -z "${tproxy_port_process_runat_user}" ] && ip6tables -t mangle -A HYSTERIA6_MARK -m owner --uid-owner ${tproxy_port_process_runat_user} -j RETURN
+			[ ! -z "${so_mark}" ] && ip6tables -t mangle -A HYSTERIA6_MARK -j RETURN -m mark --mark ${so_mark}
 			if [ -z "${tproxy_port_process_runat_user}" ] && [ -z "${so_mark}" ];then
 				echo '您没有配置tproxy_port_process_runat_user或so_mark，为避免产生回环，已自动改成不代理本机流量'
 				return 1
 			fi
 
 			# 仅对公网 IPv6 启用代理
-			ip6tables -t mangle -A HYSTERIA_MARK ! -d 2000::/3 -j RETURN
+			ip6tables -t mangle -A HYSTERIA6_MARK ! -d 2000::/3 -j RETURN
+
+			ip6tables -t mangle -A HYSTERIA6_MARK -p tcp -m set --match-set china6.ipset dst -j RETURN
+			[ "${udp}" == 1 ] && ip6tables -t mangle -A HYSTERIA6_MARK -p udp -m set --match-set china6.ipset dst -j RETURN
+			ip6tables -t mangle -A HYSTERIA6_MARK -p tcp -m set --match-set vps6.ipset dst -j RETURN
+			[ "${udp}" == 1 ] && ip6tables -t mangle -A HYSTERIA6_MARK -p udp -m set --match-set vps6.ipset dst -j RETURN
 
 			# 重路由 OUTPUT 链流量到 PREROUTING 链
-			ip6tables -t mangle -A HYSTERIA_MARK -p tcp -j MARK --set-mark ${MARK}
-			[ "${udp}" == 1 ] && ip6tables -t mangle -A HYSTERIA_MARK -p udp -j MARK --set-mark ${MARK}
+			ip6tables -t mangle -A HYSTERIA6_MARK -p tcp -j MARK --set-mark ${so_mark}
+			[ "${udp}" == 1 ] && ip6tables -t mangle -A HYSTERIA6_MARK -p udp -j MARK --set-mark ${so_mark}
 
 			# 启用上述规则
-			ip6tables -t mangle -A OUTPUT -j HYSTERIA_MARK
+			ip6tables -t mangle -A OUTPUT -j HYSTERIA6_MARK
 
 			# === 代理本机流量 - 结束 ===
 		fi
@@ -203,20 +219,38 @@ start_iptables() {
 }
 
 stop_iptables() {
-	iptables-save | grep ' -j HYSTERIA' |awk '{for(i=2;i<=NF;i=i+1)printf " "$i;print ""}' |while read LINE; do iptables -t mangle -D $LINE; done
-	ip6tables-save | grep ' -j HYSTERIA' |awk '{for(i=2;i<=NF;i=i+1)printf " "$i;print ""}' |while read LINE; do ip6tables -t mangle -D $LINE; done
-	# iptables -t mangle -D PREROUTING -j HYSTERIA
-	iptables -t mangle -F HYSTERIA
-	iptables -t mangle -X HYSTERIA
-
-	# iptables -t mangle -D OUTPUT -j HYSTERIA_MARK  >/dev/null 2>&1
-	iptables -t mangle -F HYSTERIA_MARK  >/dev/null 2>&1
-	iptables -t mangle -X HYSTERIA_MARK  >/dev/null 2>&1
-
-	ip6tables -t mangle -F HYSTERIA
-	ip6tables -t mangle -X HYSTERIA
-	ip6tables -t mangle -F HYSTERIA_MARK  >/dev/null 2>&1
-	ip6tables -t mangle -X HYSTERIA_MARK  >/dev/null 2>&1
+	iptables-save | grep ' HYSTERIA' |awk '{for(i=2;i<=NF;i=i+1)printf " "$i;print ""}' |while read LINE; do iptables -t mangle -D $LINE; done
+	ip6tables-save | grep ' HYSTERIA' |awk '{for(i=2;i<=NF;i=i+1)printf " "$i;print ""}' |while read LINE; do ip6tables -t mangle -D $LINE; done
+	
+	iptables-save|grep ':HYSTERIA' |awk '{print $1}'|awk -F: '{print $2}'|while read LINE; do iptables -t mangle -F $LINE;iptables -t mangle -X $LINE; done
+	ip6tables-save|grep ':HYSTERIA' |awk '{print $1}'|awk -F: '{print $2}'|while read LINE; do ip6tables -t mangle -F $LINE;ip6tables -t mangle -X $LINE; done
+	
+	iptables-save | grep 'USE_PROXY' |awk '{for(i=2;i<=NF;i=i+1)printf " "$i;print ""}' |while read LINE; do iptables -t nat -D $LINE; done
+	ip6tables-save | grep 'USE_PROXY' |awk '{for(i=2;i<=NF;i=i+1)printf " "$i;print ""}' |while read LINE; do ip6tables -t nat -D $LINE; done
+	
+	## iptables -t mangle -D PREROUTING -j HYSTERIA
+	#iptables -t mangle -F HYSTERIA
+	#iptables -t mangle -X HYSTERIA
+	#iptables -t mangle -F HYSTERIA_PROXY
+	#iptables -t mangle -X HYSTERIA_PROXY
+	#
+	## iptables -t mangle -D OUTPUT -j HYSTERIA_MARK  >/dev/null 2>&1
+	#iptables -t mangle -F HYSTERIA_MARK  >/dev/null 2>&1
+	#iptables -t mangle -X HYSTERIA_MARK  >/dev/null 2>&1
+	#
+	#ip6tables -t mangle -F HYSTERIA6
+	#ip6tables -t mangle -X HYSTERIA6
+	##ip6tables -t mangle -F HYSTERIA_PROXY
+	##ip6tables -t mangle -X HYSTERIA_PROXY
+	#ip6tables -t mangle -F HYSTERIA6_MARK  >/dev/null 2>&1
+	#ip6tables -t mangle -X HYSTERIA6_MARK  >/dev/null 2>&1
+	#
+	#iptables-save | grep ' -j DIVERT' |awk '{for(i=2;i<=NF;i=i+1)printf " "$i;print ""}' |while read LINE; do iptables -t mangle -D $LINE; done
+	#ip6tables-save | grep ' -j DIVERT' |awk '{for(i=2;i<=NF;i=i+1)printf " "$i;print ""}' |while read LINE; do ip6tables -t mangle -D $LINE; done
+	#iptables -t mangle -F DIVERT
+	#iptables -t mangle -X DIVERT
+	#ip6tables -t mangle -F DIVERT
+	#ip6tables -t mangle -X DIVERT
 }
 
 start_ipset() {
@@ -226,37 +260,38 @@ start_ipset() {
 		ipset restore -f /etc/ipset/china6.ipset
 		ipset restore -f /etc/ipset/vps6.ipset
 	fi
+	for ips in ${ipsetfile} ; do
+		if [ ! -z ${ips} ];then
+			setname=$(head -n 1 ${ips}|awk '{print $2}')
+			ipset destroy $setname
+			ipset restore -f ${ips}
+		fi
+	done
 }
 
 start_iproute2() {
 	# Strategy Route
-	ip -4 route add local default dev lo 	table 100
-	ip -4 rule add fwmark ${MARK} 		table 100
+	ip -4 rule add fwmark 1 table 100
+	ip -4 route add local default dev lo table 100
+	[ "${ipv6_proxy}" == 1 ] && ip -6 rule add fwmark 1 table 100
 	[ "${ipv6_proxy}" == 1 ] && ip -6 route add local default dev lo table 100 metric 100
-	[ "${ipv6_proxy}" == 1 ] && ip -6 rule add fwmark ${MARK} table 100
 }
 
 stop_iproute2() {
 	ip -4 rule  del   table 100 >/dev/null 2>&1
 	ip -4 route flush table 100 >/dev/null 2>&1
-	ip -6 rule  del   table 100
-	ip -6 route flush table 100
-	ip -6 route delete local default dev lo table 100
+	ip -6 rule  del   table 100 >/dev/null 2>&1
+	ip -6 route flush table 100 >/dev/null 2>&1
+	ip -6 route delete local default dev lo table 100 >/dev/null 2>&1
 }
 
 stop_ipset() {
-	iptables-save | grep '.ipset ' |awk '{for(i=2;i<=NF;i=i+1)printf " "$i;print ""}' |while read LINE; do iptables -t mangle -D $LINE; done
-	ip6tables-save | grep '.ipset ' |awk '{for(i=2;i<=NF;i=i+1)printf " "$i;print ""}' |while read LINE; do ip6tables -t mangle -D $LINE; done
-	ipset destroy china.ipset
-	ipset destroy vps.ipset
-	ipset list china6.ipset -n
-	if [ $? == 0 ];then
-		ipset destroy china6.ipset
-	fi
-	ipset list vps6.ipset -n
-	if [ $? == 0 ];then
-		ipset destroy vps6.ipset
-	fi
+	#iptables-save | grep '.ipset ' |awk '{for(i=2;i<=NF;i=i+1)printf " "$i;print ""}' |while read LINE; do iptables -t mangle -D $LINE; done
+	#ip6tables-save | grep '.ipset ' |awk '{for(i=2;i<=NF;i=i+1)printf " "$i;print ""}' |while read LINE; do ip6tables -t mangle -D $LINE; done
+	ipset destroy china.ipset >/dev/null 2>&1
+	ipset destroy vps.ipset >/dev/null 2>&1
+	ipset destroy china6.ipset >/dev/null 2>&1
+	ipset destroy vps6.ipset >/dev/null 2>&1
 }
 
 validate_section_fw() {
@@ -282,7 +317,7 @@ fw_rule() {
 			if [ ! -z ${lanmac} ];then
 				iptables -t mangle -I HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
 		        if [ "${ipv6_proxy}" == 1 ];then
-		            ip6tables -t mangle -I HYSTERIA -m mac --mac-source ${lanmac} -j RETURN
+		            ip6tables -t mangle -I HYSTERIA6 -m mac --mac-source ${lanmac} -j RETURN
 		        fi
 			fi
 		done
@@ -290,7 +325,7 @@ fw_rule() {
 			if [ ! -z ${lanip} ];then
 				iptables -t mangle -I HYSTERIA -s ${lanip} -j RETURN
 		        if [ "${ipv6_proxy}" == 1 ] && [[ ${lanip} =~ ":" ]];then
-		            ip6tables -t mangle -I HYSTERIA -s ${lanip} -j RETURN
+		            ip6tables -t mangle -I HYSTERIA6 -s ${lanip} -j RETURN
 		        fi
 			fi
 		done
@@ -318,8 +353,10 @@ start_x() {
 	fi
 	echo china ipset count $(ipset list china.ipset |grep Number)
 	echo vps ipset count $(ipset list vps.ipset |grep Number)
-	echo china6 ipset count $(ipset list china6.ipset |grep Number)
-	echo vps6 ipset count $(ipset list vps6.ipset |grep Number)
+	if [ "${ipv6_proxy}" == 1 ];then
+		echo china6 ipset count $(ipset list china6.ipset |grep Number)
+		echo vps6 ipset count $(ipset list vps6.ipset |grep Number)
+	fi
 }
 
 stop_x() {
