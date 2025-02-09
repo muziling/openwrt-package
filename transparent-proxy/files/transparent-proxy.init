@@ -104,8 +104,8 @@ start_iptables() {
 	# 强制走代理，用mangle链的TPROXY会上不了国内网，所以只能用REDIRECT方式
 	for ips in ${ipsetname} ; do
 		if [ ! -z ${ips} ];then
-			iptables -t nat -I PREROUTING -p tcp -m set --match-set ${ips} dst -m comment --comment "USE_PROXY" -j REDIRECT --to-port ${redirect_port}
-			[ "${udp}" == 1 ] && iptables -t nat -I PREROUTING -p udp -m set --match-set ${ips} dst -m comment --comment "USE_PROXY" -j REDIRECT --to-port ${redirect_port}
+			iptables -t nat -I PREROUTING -p tcp -m set --match-set ${ips} dst -m comment --comment "USE_PROXY" -j REDIRECT --to-port ${redirect_port} -m mark --mark 0xff
+			[ "${udp}" == 1 ] && iptables -t nat -I PREROUTING -p udp -m set --match-set ${ips} dst -m comment --comment "USE_PROXY" -j REDIRECT --to-port ${redirect_port} -m mark --mark 0xff
 		fi
 	done
 
