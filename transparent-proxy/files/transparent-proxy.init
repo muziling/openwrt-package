@@ -64,6 +64,7 @@ start_iptables() {
 
 	iptables -t mangle -A HYSTERIA -d 0.0.0.0/8 -j RETURN
 	iptables -t mangle -A HYSTERIA -d 10.0.0.0/8 -j RETURN
+	iptables -t mangle -A HYSTERIA -d 100.64.0.0/10 -j RETURN
 	iptables -t mangle -A HYSTERIA -d 127.0.0.0/8 -j RETURN
 	iptables -t mangle -A HYSTERIA -d 169.254.0.0/16 -j RETURN
 	iptables -t mangle -A HYSTERIA -d 172.16.0.0/12 -j RETURN
@@ -165,6 +166,7 @@ start_iptables() {
 		# 绕过局域网和特殊 IPv4 地址
 		iptables -t mangle -A HYSTERIA_MARK -d 0.0.0.0/8 -j RETURN
 		iptables -t mangle -A HYSTERIA_MARK -d 10.0.0.0/8 -j RETURN
+		iptables -t mangle -A HYSTERIA_MARK -d 100.64.0.0/10 -j RETURN
 		iptables -t mangle -A HYSTERIA_MARK -d 127.0.0.0/8 -j RETURN
 		iptables -t mangle -A HYSTERIA_MARK -d 169.254.0.0/16 -j RETURN
 		iptables -t mangle -A HYSTERIA_MARK -d 172.16.0.0/12 -j RETURN
