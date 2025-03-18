@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=sing-box
-PKG_VERSION:=1.8.0-rc.6
+PKG_VERSION:=1.11.5
 PKG_RELEASE:=1
 PKG_LICENSE_FILES:=LICENSE
 PKG_MAINTAINER:=nekohasekai
