@@ -92,6 +92,8 @@ start_iptables() {
 	[ "${udp}" == 1 ] && iptables$nft -t mangle -A HYSTERIA -p udp -m set --match-set china.ipset dst -j RETURN
 	iptables$nft -t mangle -A HYSTERIA -p tcp -m set --match-set vps.ipset dst -j RETURN
 	[ "${udp}" == 1 ] && iptables$nft -t mangle -A HYSTERIA -p udp -m set --match-set vps.ipset dst -j RETURN
+	# 丢弃quic协议的包，强制浏览器不使用quic来连接
+	[ "${udp}" == 0 ] && iptables$nft -t mangle -A HYSTERIA -p udp --dport 443 -j DROP
 	iptables$nft -t mangle -A HYSTERIA -j RETURN -m mark --mark ${so_mark}
 	# 重定向流量到 TProxy 端口
 	[ "${udp}" == 1 ] && iptables$nft -t mangle -A HYSTERIA -p udp -j TPROXY --on-ip 127.0.0.1 --on-port ${redirect_port} --tproxy-mark 1
@@ -131,6 +133,8 @@ start_iptables() {
 		ip6tables$nft -t mangle -A HYSTERIA6 -p tcp -m set --match-set vps6.ipset dst -j RETURN
 		[ "${udp}" == 1 ] && ip6tables$nft -t mangle -A HYSTERIA6 -p udp -m set --match-set vps6.ipset dst -j RETURN
 		ip6tables$nft -t mangle -A HYSTERIA6 -j RETURN -m mark --mark ${so_mark}
+		# 丢弃quic协议的包，强制浏览器不使用quic来连接
+		[ "${udp}" == 0 ] && ip6tables$nft -t mangle -A HYSTERIA6 -p udp --dport 443 -j DROP
 		# 重定向流量到 TProxy 端口
 		[ "${udp}" == 1 ] && ip6tables$nft -t mangle -A HYSTERIA6 -p udp -j TPROXY --on-ip ::1 --on-port ${redirect_port} --tproxy-mark 1
 		ip6tables$nft -t mangle -A HYSTERIA6 -p tcp -j TPROXY --on-ip ::1 --on-port ${redirect_port} --tproxy-mark 1
@@ -182,6 +186,9 @@ start_iptables() {
 		iptables$nft -t mangle -A HYSTERIA_MARK -p tcp -m set --match-set vps.ipset dst -j RETURN
 		[ "${udp}" == 1 ] && iptables$nft -t mangle -A HYSTERIA_MARK -p udp -m set --match-set vps.ipset dst -j RETURN
 
+		# 丢弃quic协议的包，强制浏览器不使用quic来连接
+		[ "${udp}" == 0 ] && iptables$nft -t mangle -A HYSTERIA_MARK -p udp --dport 443 -j DROP
+	
 		# 重路由 OUTPUT 链流量到 PREROUTING 链
 		iptables$nft -t mangle -A HYSTERIA_MARK -p tcp -j MARK --set-mark 1
 		[ "${udp}" == 1 ] && iptables$nft -t mangle -A HYSTERIA_MARK -p udp -j MARK --set-mark 1
@@ -211,6 +218,9 @@ start_iptables() {
 			ip6tables$nft -t mangle -A HYSTERIA6_MARK -p tcp -m set --match-set vps6.ipset dst -j RETURN
 			[ "${udp}" == 1 ] && ip6tables$nft -t mangle -A HYSTERIA6_MARK -p udp -m set --match-set vps6.ipset dst -j RETURN
 
+			# 丢弃quic协议的包，强制浏览器不使用quic来连接
+			[ "${udp}" == 0 ] && ip6tables$nft -t mangle -A HYSTERIA6_MARK -p udp --dport 443 -j DROP
+	
 			# 重路由 OUTPUT 链流量到 PREROUTING 链
 			ip6tables$nft -t mangle -A HYSTERIA6_MARK -p tcp -j MARK --set-mark ${so_mark}
 			[ "${udp}" == 1 ] && ip6tables$nft -t mangle -A HYSTERIA6_MARK -p udp -j MARK --set-mark ${so_mark}
