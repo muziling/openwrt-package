@@ -9,6 +9,7 @@ PROG=/usr/bin/$NAME
 validate_section_xray() {
 	uci_load_validate "${NAME}" general "$1" "$2" \
 		'enable:bool:0' \
+		'asset_location:string' \
 		'conf_json:string'
 }
 
@@ -34,6 +35,7 @@ xray_instance() {
 	procd_open_instance "$1"
 	procd_set_param command "$PROG"
 	procd_append_param command -c /var/etc/xray-helper/conf.json
+	[ ! -z ${asset_location} ] && procd_set_param env XRAY_LOCATION_ASSET=${asset_location}
 
 	procd_set_param respawn
 	[ -x /sbin/ujail -a -e /etc/capabilities/xray.json ] && {
@@ -41,6 +43,7 @@ xray_instance() {
 		procd_add_jail_mount "/var/etc/xray-helper"
 		procd_add_jail_mount "/usr/share/xray"
 		procd_add_jail_mount_rw "/tmp"
+		[ ! -z ${asset_location} ] && procd_add_jail_mount "${asset_location}"
 		procd_set_param capabilities /etc/capabilities/xray.json
 		procd_set_param user xray
 		procd_set_param group xray
