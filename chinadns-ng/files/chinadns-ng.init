@@ -8,8 +8,8 @@ PROG=/usr/bin/$NAME
 
 validate_section_chinadns_ng() {
 	uci_load_validate "${NAME}" general "$1" "$2" \
-		'enable:bool:0' \ \
-		'ipsetfile:string'
+		'enable:bool:0' \
+		'ipsetfile:string' \
 		'conf_raw:string'
 }
 
