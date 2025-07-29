@@ -8,7 +8,8 @@ PROG=/usr/bin/$NAME
 
 validate_section_chinadns_ng() {
 	uci_load_validate "${NAME}" general "$1" "$2" \
-		'enable:bool:0' \
+		'enable:bool:0' \ \
+		'ipsetfile:string'
 		'conf_raw:string'
 }
 
@@ -23,6 +24,13 @@ gen_config_file() {
 }
 
 create_ipset() {
+	for ips in ${ipsetfile} ; do
+		if [ ! -z ${ips} ];then
+			setname=$(head -n 1 ${ips}|awk '{print $2}')
+			ipset destroy $setname
+			ipset restore -f ${ips}
+		fi
+	done
 	for setname in $(grep group-ipset /var/etc/chinadns-ng/conf.raw |awk '{print $2}'|tr ',' '\n') ; do
 		ipset destroy $setname
 		if [[ ${setname: -1} == "6" ]];then
