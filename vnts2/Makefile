@@ -19,7 +19,7 @@ else
 endif
 
 define Download/vnts2
-        URL:=https://github.com/vnt-dev/vnts/releases/download/$(PKG_VERSION)/
+        URL:=https://github.com/muziling/vnts/releases/download/$(PKG_VERSION)/
         URL_FILE:=$(vnts2_ARCH)
         FILE:=$(vnts2_ARCH)
         HASH:=$(PKG_HASH)
