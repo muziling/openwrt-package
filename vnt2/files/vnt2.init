@@ -1,0 +1,59 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+USE_PROCD=1
+
+NAME=vnt2
+PROG=/usr/bin/$NAME_cli
+
+validate_section_vnt2() {
+	uci_load_validate "${NAME}" general "$1" "$2" \
+		'enable:bool:0' \
+		'conf_toml:string'
+}
+
+uci_get_by_type() {
+	local ret=$(uci get ${NAME}.@$1[0].$2 2>/dev/null)
+	echo "${ret:=$3}"
+}
+
+gen_config_file() {
+	local custom_config=$(uci_get_by_type general conf_toml)
+	[ ! "${#custom_config}" == "0" ] && echo "${custom_config}" > /var/etc/vnt2/conf.toml
+	if [ echo "${custom_config}"|grep -q '^device_id' ]; then
+	else
+		echo 'device_id = "vnt-'$(cat /sys/class/net/br-lan/address|tr -d ':')'"' >> /var/etc/vnt2/conf.toml
+	fi
+}
+
+vnt2_instance() {
+	[ "$2" = 0 ] || {
+		echo "validation failed"
+		return 1
+	}
+
+	[ "${enable}" = 0 ] && return 1
+
+	gen_config_file
+	procd_open_instance "$1"
+	procd_set_param command "$PROG"
+	procd_append_param command --conf /var/etc/vnt2/conf.toml
+
+	procd_set_param respawn
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+
+	procd_close_instance
+}
+
+start_service() {
+	mkdir -p /var/etc/vnt2
+	rm -f /var/etc/vnt2/*
+	config_load "${NAME}"
+	config_foreach validate_section_vnt2 general vnt2_instance
+}
+
+reload_service() {
+	stop
+	start
+}
