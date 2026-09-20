@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=vnt2
-PKG_VERSION:=v2.0.9
+PKG_VERSION:=v2.0.8
 PKG_RELEASE:=1
 PKG_LICENSE_FILES:=LICENSE
 PKG_MAINTAINER:=lbl8603
@@ -20,7 +20,7 @@ else
 endif
 
 define Download/vnt2
-        URL:=https://github.com/muziling/vnt2/releases/download/$(PKG_VERSION)/
+        URL:=https://github.com/muziling/vnt/releases/download/$(PKG_VERSION)/
         URL_FILE:=$(vnt2_ARCH)
         FILE:=$(vnt2_ARCH)
         HASH:=$(PKG_HASH)
