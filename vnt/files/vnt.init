@@ -20,6 +20,10 @@ uci_get_by_type() {
 gen_config_file() {
 	local custom_config=$(uci_get_by_type general conf_yaml)
 	[ ! "${#custom_config}" == "0" ] && echo "${custom_config}" > /var/etc/vnt/conf.yaml
+	if [ echo "${custom_config}"|grep -q '^device_id' ]; then
+	else
+		echo 'device_id: 00000000-0000-0000-0000-'$(cat /sys/class/net/br-lan/address|tr -d ':') >> /var/etc/vnt/conf.yaml
+	fi
 }
 
 vnt_instance() {
