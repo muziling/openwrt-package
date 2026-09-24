@@ -20,7 +20,8 @@ uci_get_by_type() {
 gen_config_file() {
 	local custom_config=$(uci_get_by_type general conf_toml)
 	[ ! "${#custom_config}" == "0" ] && echo "${custom_config}" > /var/etc/vnt2/conf.toml
-	if [ echo "${custom_config}"|grep -q '^device_id' ]; then
+	if echo "${custom_config}"|grep -q '^device_id'; then
+		echo ''
 	else
 		echo 'device_id = "vnt-'$(cat /sys/class/net/br-lan/address|tr -d ':')'"' >> /var/etc/vnt2/conf.toml
 	fi
